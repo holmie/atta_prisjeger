@@ -28,9 +28,9 @@
 | I-024 | Live source rights and redistribution scope must be verified independently of syntax-valid scraper success. |
 | I-025 | API `/v1` identifiers are stable, pagination/change cursors resumable, secrets not exposed in consumer responses. |
 | I-026 | Task ledger DONE is human-attested actual merge SHA/PR/tests; milestone gates need independent evidence. |
-
 | I-027 | CurrentLowestPrice cache and LowestPriceHistory are derived/repairable; historical seller store_id, store_product_id, store_name_snapshot preserved without a current Store-name JOIN. |
 | I-028 | History is bounded to 24 months plus pre-cutoff checkpoint; logs/raw/rank events expire; retiring StoreProducts cannot destroy retained price history. |
 | I-029 | Stable input volume plus stable activity should reach measurable bounded storage; partial feeds never trigger destructive cleanup. |
+| I-030 | Core architecture is monolithic Django/DRF/PostgreSQL control plane with outbound-only agents; no mandatory broker/search cluster |
 
 **Design-conflict policy:** halt scope change and propose ADR. Do not delete negative tests or change cards silently to make CI green.

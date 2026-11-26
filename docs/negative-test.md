@@ -1,90 +1,67 @@
-# Negative Test: Derived Lowest History Cannot Replace StoreProduct Price Truth
+# Planned Negative Tests: Source Price Truth and Derived Lowest Price
 
-## Test Case
+**Status: specification only.** This repository does not yet contain executable application tests for these scenarios. Nothing below has been run or passed. Implement these as automated tests once ingestion and lowest-price derivation exist.
 
-This test demonstrates that `LowestPriceHistory` records are event-based winner changes that do contain actual price values, and cannot replace `StoreProduct` price truth.
+These cases exercise `project-memory/02_INVARIANTS.md` (especially I-009, I-010, I-011, I-020, I-021 and I-027), D-017, and `contracts/lowest-price.md`.
 
-### Setup
-1. Create a `StoreProduct` with initial price of 100.00
-2. Create a `PriceHistory` entry for this price
-3. Create another `StoreProduct` with the same product but different store, price 90.00
-4. Create a `PriceHistory` entry for this price
-5. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
+## 1. Losing seller's price change must survive ingestion
 
-### Expected Behavior
+**Failure being excluded:** an implementation saves only the cheapest seller's prices, making `LowestPriceHistory` look correct while silently discarding another StoreProduct's source prices.
 
-The `LowestPriceHistory` record:
-- Shows store with ID 2 had the lowest price 
-- Records the time of change
-- Preserves store_id, store_product_id, and store_name_snapshot
-- **DOES contain the actual price value (90.00) from the StoreProduct** as part of the derived lowest-price amount
+**Fixture and actions (through the normal ingestion entry point):**
 
-### Verification
+1. Create two distinct Stores, each with its own DataSource. Ingest one StoreProduct per source. Record their **distinct StoreProduct UUIDs** as `sp_a` and `sp_b`; never substitute Store IDs for StoreProduct IDs.
+2. Link both StoreProducts to the **same ProductIdentity**. Use the same known currency (e.g. NOK), simultaneously available offers, and overlapping known coverage.
+3. At `t0`, ingest `sp_a = 100.00 NOK` and `sp_b = 90.00 NOK`. Run the normal minimum derivation. `sp_b` is the winner.
+4. At `t1 > t0`, ingest a material price change for the **losing** `sp_a` from `100.00` to `95.00 NOK`, without changing eligibility or availability. Run derivation again.
 
-To verify that `LowestPriceHistory` cannot replace `StoreProduct` price truth:
-1. Query the `StoreProduct` with ID 2 to get actual price of 90.00
-2. Compare with `LowestPriceHistory` which now shows the exact price amount (90.00)
-3. Confirm that `LowestPriceHistory` does contain the exact price amount
+**Required assertions:**
 
-## Updated Test Scenario for Feedback Compliance
+- `sp_a.current_price = 95.00` with currency NOK.
+- `PriceHistory` for **`sp_a`** contains its initial `100.00` event and later `95.00` event, keyed to `sp_a`; `sp_b` retains its own `90.00` price event. No unchanged-poll duplicates.
+- `CurrentLowestPrice` for the ProductIdentity still has **90.00 NOK**, winner `sp_b`, the correct Store UUID and copied `store_name_snapshot`.
+- `LowestPriceHistory` contains the derived **90.00 NOK** minimum and winner; **the losing seller's 100-to-95 change alone produces no new lowest-price event**, because neither amount nor winner nor coverage changed.
+- Corrupting or deleting the *derived* projection and rebuilding it from preserved source observations restores the same result; changing a projection does not change `sp_a` or either StoreProduct's `PriceHistory`.
 
-The following scenario better demonstrates that losing prices are preserved in PriceHistory:
+This is the negative test: **a matching derived winner is insufficient** unless the losing seller's observations are demonstrably preserved by normal ingestion.
 
-1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00) 
-2. Link both sellers to the same ProductIdentity
-3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
-4. Change the losing seller's price from 100.00 to 95.00 
-5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
-6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
-7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
-8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
+## 2. Relink may rewrite the historical minimum without changing today's winner
 
-## Correction Based on Feedback
+**Failure being excluded:** code that skips historical recomputation whenever the *current* winning seller remains unchanged.
 
-The original documentation incorrectly stated that `LowestPriceHistory` did not contain price values. This has been corrected to reflect that:
+Use known, overlapping availability and the same currency for all examples. Ingest the observations and derive history for two canonical identities `A` and `B`:
 
-1. `LowestPriceHistory` records contain the actual derived lowest-price amounts
-2. These amounts are computed from `StoreProduct` and `PriceHistory` data
-3. The derived records are still repairable/recomputable from source data, but now include the actual price values
+| StoreProduct | Initially linked identity | At t0 | At t1 (current) |
+| --- | --- | --- | --- |
+| `sp_x` | A | 100.00 | 80.00 |
+| `sp_y` | A | 90.00 | 85.00 |
+| `sp_z` | B | 120.00 | 110.00 |
 
-### Additional Clarification on Relink Impact
+Before relink, the expected minimum for A is `sp_y / 90.00` at t0 and `sp_x / 80.00` at t1. For B it is `sp_z / 120.00` at t0 and `sp_z / 110.00` at t1.
 
-A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
+Now **relink `sp_y` from A to B** through the supported audited identity-correction path. Do not change prices or availability.
 
-1. Historical results for affected identities must be refreshed when their linked products change
-2. This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
-3. If the current winner remains unchanged, no new events are added to LowestPriceHistory
-4. However, under D-017 and I-021, recomputing history from the currently linked StoreProducts can add, replace, or remove earlier price, winner, and availability-gap events. This means that when a relink operation affects the historical price records for affected ProductIdentities, the `LowestPriceHistory` must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
+**Required assertions:**
 
-## Regression Test Scenario
+- A's **current** winner remains `sp_x / 80.00`, but A's **historical** t0 minimum becomes `sp_x / 100.00` rather than `sp_y / 90.00`.
+- B's current winner becomes `sp_y / 85.00`; its historical t0 minimum becomes `sp_y / 90.00` rather than `sp_z / 120.00`.
+- The retained `LowestPriceHistory` timelines of **both** identities are recomputed using their **currently linked** StoreProducts. Earlier derived events may be inserted, replaced, or removed; there is **no rule forbidding historical changes when today's winner is unchanged**.
+- All three StoreProduct UUIDs and their source `PriceHistory` events remain unchanged. No source price event is introduced solely for the relink.
 
-### Planned Scenario: Price Change Impact on Lowest Price History
-1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00)
-2. Link both sellers to the same ProductIdentity
-3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
-4. Change the losing seller's price from 100.00 to 95.00 
-5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
-6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
-7. Verify that the losing StoreProduct still shows 95.00 in its current price
-8. Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries
+This is a **historical rebuild**, not an invented source-price observation at relink time.
 
-This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.
+## 3. Availability-only transition affects the derived result, not PriceHistory
 
-### Updated Test Scenario with Proper Ingestion Path
+**Failure being excluded:** a cached winner remains the cheapest even after going unavailable because its numeric price did not change.
 
-To ensure proper testing of the ingestion path and prevent regressions:
+1. Ingest two StoreProducts linked to one ProductIdentity, with known comparable currency and coverage: `sp_a = 90.00 NOK` and `sp_b = 100.00 NOK`, both initially available.
+2. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
+3. Recompute affected current and historical minimum results. If `sp_b` remains eligible, it becomes the 100.00 NOK winner. If no offer remains eligible, represent the coverage gap rather than inventing a lowest price.
+4. Assert that `LowestPriceHistory` records the relevant winner/gap transition and `CurrentLowestPrice` no longer presents `sp_a` as eligible.
+5. Assert that **neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
 
-1. **Create two StoreProducts with different stores and prices** (e.g., 100.00 and 90.00) using the normal ingestion process
-2. **Link both sellers to the same ProductIdentity**
-3. **Run derivation to establish baseline lowest price history** (store with ID 2 is cheapest)
-4. **Update the losing seller's price through normal ingestion** from 100.00 to 95.00 
-5. **Verify that PriceHistory retains both amounts** (100.00 and 95.00) using direct queries on the PriceHistory records
-6. **Verify that LowestPriceHistory emits no new event** because the winner is unchanged
-7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
-8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
+The system must use available observation/coverage evidence; no historical availability is fabricated where the source does not establish it.
 
-This updated scenario ensures:
-- All data enters through the normal ingestion path
-- The test verifies that losing prices are properly preserved in PriceHistory
-- It demonstrates that the system correctly handles both current and historical price records
-- It prevents the regression where non-winning prices might be discarded
+---
+
+**Acceptance evidence required later:** executable test names, the exact command run, and actual results. These written scenarios alone do not satisfy a passing-test claim.

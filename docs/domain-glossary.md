@@ -77,10 +77,12 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Updated on material price changes
   - Contains the actual derived lowest-price amount
   - Refreshed on merge, split, or relink of ProductIdentity that affects the cheapest StoreProduct
+  - Updated when availability changes the result (as required by I-021)
 - **Key Characteristics**:
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated when availability changes the result (as required by I-021)
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
@@ -91,12 +93,14 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Never pre-observation or known unavailable gaps
   - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
   - Updated on material price changes, and merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated when availability changes the result (as required by I-021)
 - **Key Characteristics**:
   - Event-based tracking of price winner changes
   - Historical seller store_id, store_product_id, store_name_snapshot preserved
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated when availability changes the result (as required by I-021)
 
 ## Source Truth vs Derived Data
 

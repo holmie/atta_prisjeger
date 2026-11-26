@@ -39,8 +39,34 @@ This project uses the following canonical documents:
 - `project-memory/02_INVARIANTS.md` - Hard invariants
 - `project-memory/03_CONTRACTS.md` - API contracts
 - `project-memory/04_CURRENT_STATE.md` - Current state documentation
-- `contracts/*.md` - Detailed contract specifications
+- `contracts/lowest-price.md` - Lowest price calculation contract
+
+## OpenCode/Codex Workflow
+
+This repository is managed by OpenCode/Codex agents with the following workflow:
+
+1. Tasks are delivered via external/local plan, not committed to this repo
+2. Read relevant in-repo memory/contracts before implementation:
+   - `project-memory/00_CONTEXT.md`
+   - `project-memory/01_DECISIONS.md`
+   - `project-memory/02_INVARIANTS.md`
+   - `project-memory/03_CONTRACTS.md`
+   - `contracts/lowest-price.md`
+3. Implement only the assigned task
+4. Run focused tests and checks:
+   - Run relevant unit tests: `python manage.py test`
+   - Verify against invariants in `project-memory/02_INVARIANTS.md`
+5. Report evidence of testing in PR description
+6. Create PR with title starting `PJ-0001:`
+7. Do not merge or mark DONE until human operator reviews and merges
 
 ## Negative Test
 
 This repository contains no references to Atta codebase, confirming independence from the Atta system.
+
+To verify this manually:
+```bash
+grep -r "atta\|Atta" . --exclude-dir=.git --exclude-dir=__pycache__ --exclude="*.pyc" || echo "No Atta references found"
+```
+
+This confirms no Atta codebase is presumed.

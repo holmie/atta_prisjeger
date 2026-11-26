@@ -33,6 +33,4 @@
 | I-028 | History is bounded to 24 months plus pre-cutoff checkpoint; logs/raw/rank events expire; retiring StoreProducts cannot destroy retained price history. |
 | I-029 | Stable input volume plus stable activity should reach measurable bounded storage; partial feeds never trigger destructive cleanup. |
 
-## Design-conflict policy
-
-Halt scope change and propose ADR. Do not delete negative tests or change cards silently to make CI green.
+**Design-conflict policy:** halt scope change and propose ADR. Do not delete negative tests or change cards silently to make CI green.

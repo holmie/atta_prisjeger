@@ -40,6 +40,7 @@ This project uses the following canonical documents:
 - `project-memory/03_CONTRACTS.md` - API contracts
 - `project-memory/04_CURRENT_STATE.md` - Current state documentation
 - `contracts/lowest-price.md` - Lowest price calculation contract
+- `docs/adr-template.md` - Architecture Decision Record template
 
 ## OpenCode/Codex Workflow
 

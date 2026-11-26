@@ -2,7 +2,7 @@
 
 ## Test Case
 
-This test demonstrates that `LowestPriceHistory` records are event-based winner changes and cannot replace `StoreProduct` price truth.
+This test demonstrates that `LowestPriceHistory` records are event-based winner changes that do contain actual price values, and cannot replace `StoreProduct` price truth.
 
 ### Setup
 1. Create a `StoreProduct` with initial price of 100.00
@@ -17,18 +17,26 @@ The `LowestPriceHistory` record:
 - Shows store with ID 2 had the lowest price 
 - Records the time of change
 - Preserves store_id, store_product_id, and store_name_snapshot
-- Does NOT contain the actual price value (90.00) from the StoreProduct
+- **DOES contain the actual price value (90.00) from the StoreProduct** as part of the derived lowest-price amount
 
 ### Verification
 
 To verify that `LowestPriceHistory` cannot replace `StoreProduct` price truth:
 1. Query the `StoreProduct` with ID 2 to get actual price of 90.00
-2. Compare with `LowestPriceHistory` which only shows winner information
-3. Confirm that `LowestPriceHistory` lacks the exact price amount
+2. Compare with `LowestPriceHistory` which now shows the exact price amount (90.00)
+3. Confirm that `LowestPriceHistory` does contain the exact price amount
 
 ### Conclusion
 
 This demonstrates that:
 - Source truth remains in `StoreProduct` and `PriceHistory`
-- `LowestPriceHistory` is derived and serves a different purpose (tracking winners)
-- The actual prices must be retrieved from source records, not derived records
+- `LowestPriceHistory` is derived and serves a different purpose (tracking winners and their actual prices)
+- The actual prices are preserved in both source and derived records
+- However, the derived records are still recomputable from source data
+
+## Correction Based on Feedback
+
+The original documentation incorrectly stated that `LowestPriceHistory` did not contain price values. This has been corrected to reflect that:
+1. `LowestPriceHistory` records contain the actual derived lowest-price amounts
+2. These amounts are computed from `StoreProduct` and `PriceHistory` data
+3. The derived records are still repairable/recomputable from source data, but now include the actual price values

@@ -65,14 +65,17 @@ This document defines the core domain models for Vareindeks and their relationsh
 ## Derived Models
 
 ### CurrentLowestPrice
-- **Definition**: One-to-one cache of the current lowest price for a StoreProduct
-- **Purpose**: Provides fast access to the currently cheapest price for each product
+- **Definition**: One-to-one cache of the current lowest price for a ProductIdentity
+- **Purpose**: Provides fast access to the currently cheapest price across all stores for each canonical product
 - **Properties**:
   - References Store UUID, StoreProduct UUID and store_name_snapshot
   - Updated on material price changes
+  - Contains the actual derived lowest-price amount
 - **Key Characteristics**:
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
+  - Per canonical product (not per StoreProduct)
+  - Per canonical product (not per StoreProduct)
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
@@ -81,10 +84,12 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Records material lowest-price, winner Store ID/name and availability-gap transitions
   - Carry forward known prices within covered intervals
   - Never pre-observation or known unavailable gaps
+  - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
 - **Key Characteristics**:
   - Event-based tracking of price winner changes
   - Historical seller store_id, store_product_id, store_name_snapshot preserved
   - Bounded to 24 months plus pre-cutoff checkpoints
+  - Stores the actual derived lowest-price amount (not just winner information)
 
 ## Source Truth vs Derived Data
 
@@ -96,8 +101,8 @@ The following records represent source truth and are immutable or directly deriv
 
 ### Derived Data
 The following records are computed/derived from source truth and can be recalculated:
-- **CurrentLowestPrice**: Cache of current lowest price for each product
-- **LowestPriceHistory**: Historical record of lowest price winner changes
+- **CurrentLowestPrice**: Cache of current lowest price for each canonical product
+- **LowestPriceHistory**: Historical record of lowest price winner changes including actual derived price amounts
 
 ## Lifecycle and Bounding
 
@@ -113,9 +118,9 @@ Store
   └── DataSource (1:N)
         └── StoreProduct (1:N)
               └── PriceHistory (1:N)
-                    └── CurrentLowestPrice (1:1)
-                    └── LowestPriceHistory (1:N)
-              └── ProductIdentity (N:1)
+                    └── ProductIdentity (N:1)
+                          └── CurrentLowestPrice (1:1)
+                          └── LowestPriceHistory (1:N)
 ```
 
 ## Key Invariants
@@ -128,6 +133,8 @@ Store
 6. History is bounded to 24 months plus pre-cutoff checkpoint
 7. No automatic GTIN joining for a store if `(store_id, reported_gtin)` is blocked
 8. Manual StoreProduct→ProductIdentity override wins over block/automatic GTIN behavior
+9. **CurrentLowestPrice is computed per ProductIdentity (not StoreProduct)**
+10. **LowestPriceHistory records contain the actual derived lowest-price amounts, not just winner information**
 
 ## Negative Test Case
 

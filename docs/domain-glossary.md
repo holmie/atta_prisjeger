@@ -62,10 +62,12 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Records initial valid price and material changes only
   - No duplicate unchanged polls (refreshes freshness only)
   - Append-only storage
+  - **Updated on availability transitions that change the winner or open/closed coverage gaps**
 - **Key Characteristics**:
   - Atomic and idempotent recording of price events
   - Material changes only (unchanged polls refresh freshness)
   - Initial price event tracking
+  - Updated not only on material price changes but also on availability transitions that change the winner or open/closed coverage gaps
 
 ## Derived Models
 
@@ -81,6 +83,7 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated on availability transitions that change the winner or open/closed coverage gaps
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
@@ -90,14 +93,14 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Carry forward known prices within covered intervals
   - Never pre-observation or known unavailable gaps
   - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
-  - Updated on material price changes and merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated on material price changes, availability transitions, and merge, split, or relink operations that affect the cheapest StoreProduct
 - **Key Characteristics**:
   - Event-based tracking of price winner changes
   - Historical seller store_id, store_product_id, store_name_snapshot preserved
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - **A relink can change an earlier winner or coverage gap while leaving today's winner unchanged**. However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
+  - Updated on availability transitions that change the winner or open/closed coverage gaps
 
 ## Source Truth vs Derived Data
 
@@ -147,7 +150,7 @@ ProductIdentity (1) -> (N) LowestPriceHistory
 A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
 - Historical results for affected identities must be refreshed when their linked products change
 - This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
-- **However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same**
+- However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
 
 ## Negative Test Case
 
@@ -185,5 +188,20 @@ To properly test that the implementation correctly handles all scenarios, we nee
 6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
 7. Verify that the losing StoreProduct still shows 95.00 in its current price
 8. Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries
+
+This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.
+
+### Updated Test Scenario for Feedback Compliance
+
+The following scenario better demonstrates that losing prices are preserved in PriceHistory:
+
+1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00) 
+2. Link both sellers to the same ProductIdentity
+3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
+4. Change the losing seller's price from 100.00 to 95.00 
+5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
+6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
+8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
 
 This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.

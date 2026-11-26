@@ -17,6 +17,7 @@ This document defines the contract for computing and storing the lowest price in
 - Availability-gap transitions
 - Carry forward known prices within covered intervals
 - Never pre-observation or known unavailable gaps
+- Updated on availability transitions that change the winner or open/closed coverage gaps
 
 ## Requirements
 

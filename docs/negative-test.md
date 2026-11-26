@@ -39,6 +39,16 @@ The following scenario better demonstrates that losing prices are preserved in P
 7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
 8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
 
+### Clarification of Test Case
+
+The verification queries a StoreProduct using the example Store ID and checks only the winning amount. That check would pass even if ingestion discarded every losing price.
+
+Instead, we should:
+- Label this as a planned scenario
+- Identify fixtures by their own StoreProduct UUIDs  
+- Use the losing-price update below as the negative check
+- Give both offers the same currency and overlapping availability so the expected winner is determinate
+
 ### Conclusion
 
 This demonstrates that:

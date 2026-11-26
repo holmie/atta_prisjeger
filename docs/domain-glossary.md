@@ -1,207 +1,104 @@
 # Domain Glossary
 
-This document defines the core domain models for Vareindeks and their relationships, as specified in the project requirements.
+This glossary summarizes the accepted Vareindeks domain model. The authoritative requirements are in `project-memory/00_CONTEXT.md`, `project-memory/01_DECISIONS.md`, `project-memory/02_INVARIANTS.md`, and `contracts/lowest-price.md`. This document does not introduce new models or override those contracts.
 
-## Core Models
+## Core models
 
 ### Store
-- **Definition**: Represents an independently priced seller with no branch inventory
-- **Purpose**: Identifies distinct sellers in the system
-- **Properties**: 
-  - Unique identifier (UUID)
-  - Name and other identifying information
-  - Source-specific configuration
-- **Key Characteristics**:
-  - Each StoreProduct must reference a Store via foreign key
-  - The Store foreign key in StoreProduct must identify the same Store as the DataSource foreign key
+
+One independently priced seller, not a physical branch or inventory location. A Store may have multiple DataSources and StoreProducts.
 
 ### DataSource
-- **Definition**: Feed/connector that belongs to one Store
-- **Purpose**: Defines how data is ingested from a specific source
-- **Properties**:
-  - Unique identifier (UUID)
-  - Connection details and credentials
-  - Store foreign key reference
+
+A feed or connector belonging to exactly one Store. Its source identifier and an external product key identify repeat observations from that source.
 
 ### ProductIdentity
-- **Definition**: Searchable UUID with nullable UNIQUE valid GTIN and variant metadata
-- **Purpose**: Represents canonical products that can be linked across different stores. This is a canonical identity record, not a listing.
-- **Properties**:
-  - Stable UUID (primary key)
-  - Canonical valid GTIN (nullable unique string, not primary key)
-  - Variant metadata for product differentiation
-- **Key Characteristics**:
-  - UUID is stable and never changes
-  - GTIN is nullable but unique when present
-  - Each ProductIdentity represents a single canonical product
+
+The canonical, searchable product identity shared by StoreProducts that are legitimately matched.
+
+- Stable UUID primary key; canonical **valid GTIN is nullable and unique**, never the primary key.
+- Variant metadata helps distinguish products.
+- Every structurally valid imported StoreProduct has a ProductIdentity, including those with missing or invalid GTIN. A provisional identity is searchable.
+- Audited overrides, merges, splits and relinks may change canonical identity data and StoreProduct membership. They do not rewrite source claims or source price history.
+- A blocked `(store_id, reported_gtin)` prevents **automatic** matching for that Store only. A persistent audited manual StoreProduct-to-ProductIdentity override takes precedence.
+
+ProductIdentity represents **canonical identity state**, not authoritative per-seller price observations.
 
 ### StoreProduct
-- **Definition**: Stable UUID with `(source_id, external_key)` unique constraint, linked to Store and ProductIdentity
-- **Purpose**: Represents a specific product listing in a specific store with its price information
-- **Properties**:
-  - Stable UUID (primary key)
-  - Source foreign key reference
-  - External key from source system
-  - ProductIdentity foreign key (NOT NULL)
-  - Reported GTIN/SKU retained from source
-  - Current Decimal price (nullable)
-  - Currency (nullable text)
-  - URL/status information
-- **Key Characteristics**:
-  - Each StoreProduct is unique by `(source_id, external_key)` combination
-  - Always linked to exactly one ProductIdentity (never NULL)
-  - Source fields including reported_gtin are never overwritten
-  - PriceHistory references StoreProduct and records initial valid price + material changes only
-  - Currency field is preserved from source and maintained alongside the price
+
+One source listing/offer persisted as a StoreProduct; no additional Offer or Listing model is introduced.
+
+- Stable UUID primary key and unique `(source_id, external_key)` pair, reused on reimport.
+- Mandatory `product_identity_id` foreign key (never NULL).
+- Explicit `store_id` foreign key and `source_id` foreign key; `StoreProduct.store_id` must identify the same Store as its DataSource.
+- Original reported GTIN/SKU, title, URL and other source evidence retained without replacing them with canonical inferences.
+- Current **nullable Decimal price** and **nullable text currency**; missing/invalid price is not zero.
+- Source status, availability and freshness information as supported by the feed.
+
+StoreProduct is the source of the **current reported price for that seller**, even when its price is not the cheapest.
 
 ### PriceHistory
-- **Definition**: Append-only record of material price changes referencing StoreProduct UUID
-- **Purpose**: Maintains complete timeline of price changes for each product in each store
-- **Properties**:
-  - References StoreProduct UUID
-  - Records initial valid price and material changes only
-  - No duplicate unchanged polls (refreshes freshness only)
-  - Append-only storage
-- **Key Characteristics**:
-  - Atomic and idempotent recording of price events
-  - Material changes only (unchanged polls refresh freshness)
-  - Initial price event tracking
 
-## Derived Models
+Append-only per-StoreProduct history of **initial valid prices and material price changes**, keyed to the StoreProduct UUID.
+
+- Ingestion writes price events atomically and idempotently, including changes at sellers that are not cheapest.
+- Unchanged price polls refresh freshness but do **not** duplicate price events.
+- Availability-only transitions are **not** material price-change events in PriceHistory (I-010). Availability can independently affect the derived minimum and its coverage-gap timeline (I-021).
+- Merge, split and relink never delete or rewrite the underlying StoreProduct price events.
+
+StoreProduct and PriceHistory are the authoritative **per-seller price data**. Lowest-price projections cannot replace them.
+
+## Derived lowest-price projections
+
+Both projections are per **ProductIdentity**, calculated from eligible StoreProducts currently linked to that identity. They are repairable derivatives, not primary price records.
 
 ### CurrentLowestPrice
-- **Definition**: One-to-one cache of the current lowest price for a ProductIdentity
-- **Purpose**: Provides fast access to the currently cheapest price across all stores for each canonical product
-- **Properties**:
-  - References Store UUID, StoreProduct UUID and store_name_snapshot
-  - Updated on material price changes
-  - Contains the actual derived lowest-price amount
-  - Refreshed on merge, split, or relink of ProductIdentity that affects the cheapest StoreProduct
-  - Updated when availability changes the result (as required by I-021)
-- **Key Characteristics**:
-  - Derived/repairable cache
-  - Maintains historical seller information without current JOINs
-  - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - Updated when availability changes the result (as required by I-021)
+
+A zero-or-one-per-ProductIdentity cache of the current eligible lowest price across linked sellers.
+
+- Stores the **derived price amount and currency**, winning `store_id`, winning `store_product_id`, and `store_name_snapshot`.
+- Refreshes when an observed price change, availability/eligibility change, or identity merge/split/relink can change the current result. Recompute affected identities even where a previous cached winner may no longer be linked.
+- If no defensible eligible result exists, do not fabricate a zero price or guaranteed cheapest offer.
+- Stale/unknown availability, unknown shipping and mixed currencies cannot be advertised as a guaranteed cheapest total (I-020).
 
 ### LowestPriceHistory
-- **Definition**: Event-based record of winner changes for lowest prices
-- **Purpose**: Tracks historical changes in the cheapest price for each product across stores
-- **Properties**:
-  - Records material lowest-price, winner Store ID/name
-  - Carry forward known prices within covered intervals
-  - Never pre-observation or known unavailable gaps
-  - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
-  - Updated on material price changes, and merge, split, or relink operations that affect the cheapest StoreProduct
-  - Updated when availability changes the result (as required by I-021)
-- **Key Characteristics**:
-  - Event-based tracking of price winner changes
-  - Historical seller store_id, store_product_id, store_name_snapshot preserved
-  - Bounded to 24 months plus pre-cutoff checkpoints
-  - Stores the actual derived lowest-price amount (not just winner information)
-  - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - Updated when availability changes the result (as required by I-021)
 
-## Source Truth vs Derived Data
+An event-based, derived timeline of **material changes to the historical minimum**, including changes to price amount, winning seller, and availability/coverage gaps.
 
-### Source Truth
-The following records represent source truth and are immutable or directly derived from source data:
-- **StoreProduct**: Contains the original price information as reported by the source
-- **PriceHistory**: Append-only record of actual price events (not estimates)
-- **ProductIdentity**: Canonical identity state that can change through audited overrides, merges, splits, and relinks
+- Each applicable lowest-price event records its **derived amount and currency** (or a gap/unknown state), winning `store_id`, `store_product_id`, `store_name_snapshot`, and effective time.
+- Known prices may carry forward only within supported observation/availability coverage. Do not infer prices before first observation or across known unavailable/unknown gaps.
+- There is **no daily insert** solely because another day passed with an unchanged minimum.
+- Historical results are recomputed from **currently linked StoreProducts** and their preserved source observations (D-017), within the retained horizon. A merge, split or relink can **insert, replace or remove earlier derived events even if today's winner and amount do not change**.
+- Availability-only changes may switch the winner or create/close a coverage gap **without inserting a PriceHistory price event**.
+- Retain 24 months of material events with the required pre-cutoff checkpoint. Preserve historical seller IDs and name snapshots without relying on today's Store name.
 
-### Derived Data
-The following records are computed/derived from source truth and can be recalculated:
-- **CurrentLowestPrice**: Cache of current lowest price for each canonical product
-- **LowestPriceHistory**: Historical record of lowest price winner changes including actual derived price amounts
+Rebuilding either derived projection never modifies raw per-seller prices or PriceHistory.
 
-## Lifecycle and Bounding
+## Relationships
 
-### Price History Bounding
-- Retain 24 months of material price events plus required pre-cutoff checkpoints
-- Logs/raw/ranking expire, incomplete feeds never bulk delete
-- Raw feeds 14 days, verbose logs 90 days, raw ranking 7 days, aggregate ranking 90 days default
-- Safe StoreProduct retirement after >=180 days and no dependent retained records
-
-### Data Relationships
-```
-Store (1) -> (N) DataSource (1) -> (N) StoreProduct
-ProductIdentity (1) -> (N) StoreProduct (1) -> (N) PriceHistory
+```text
+Store (1) ----------> (N) DataSource
+Store (1) ----------> (N) StoreProduct    [same Store as its DataSource]
+DataSource (1) -----> (N) StoreProduct
+ProductIdentity (1) -> (N) StoreProduct
+StoreProduct (1) ---> (N) PriceHistory
 ProductIdentity (1) -> (0..1) CurrentLowestPrice
 ProductIdentity (1) -> (N) LowestPriceHistory
-
 ```
 
-## Key Invariants
+The derived projections also retain references to the **winning** Store and StoreProduct and a seller-name snapshot; they are not children of an individual PriceHistory event.
 
-1. Every published valid StoreProduct has exactly one non-null ProductIdentity FK
-2. Every ProductIdentity has stable UUID; canonical GTIN is a nullable unique string
-3. `(source_id,external_key)` uniquely and idempotently identifies one StoreProduct
-4. Source fields including reported_gtin never overwritten (auditable corrections)
-5. Derived caches are repairable and historical seller information preserved without JOINs
-6. History is bounded to 24 months plus pre-cutoff checkpoint
-7. No automatic GTIN joining for a store if `(store_id, reported_gtin)` is blocked
-8. Manual StoreProduct→ProductIdentity override wins over block/automatic GTIN behavior
-9. **CurrentLowestPrice is computed per ProductIdentity (not StoreProduct)**
-10. **LowestPriceHistory records contain the actual derived lowest-price amounts**
+## Changes and retention
 
-## Relink Impact on History
+| Input/change | Source price history | Derived projections |
+| --- | --- | --- |
+| Initial valid price or material price change | Append an idempotent PriceHistory event | Re-evaluate affected current/historical minima |
+| Unchanged price poll | No new price event; refresh freshness | No new minimum event merely for the poll |
+| Availability/eligibility transition without price change | No PriceHistory price event | Refresh current result; update winner/gap events when the historical result changes |
+| Merge, split or relink | Preserve StoreProduct UUIDs and raw history | Recompute affected identities' current cache **and retained historical timelines**, regardless of whether the current winner changes |
 
-A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
-- Historical results for affected identities must be refreshed when their linked products change
-- This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
-- However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
+Raw feeds default to 14 days; verbose logs 90 days; raw ranking events 7 days and aggregates 90 days. Incomplete feeds never trigger destructive bulk retirement. Safe StoreProduct retirement requires at least 180 days and no dependent retained history (I-028/I-029).
 
-## Negative Test Case
+## Planned regression coverage
 
-### Proving Derived Lowest History Cannot Replace StoreProduct Price Truth
-
-The derived `LowestPriceHistory` records are event-based winner changes that contain the actual derived lowest-price amounts computed from source data. They record:
-
-- Which store had the lowest price at a given time
-- When the winner changed
-- Availability-gap transitions
-- The actual derived lowest-price amount (and currency/availability semantics where applicable)
-
-However, `LowestPriceHistory` cannot replace `StoreProduct` price truth because it only provides information about price winner changes and their associated actual prices, not the raw source price data itself. 
-
-The key point is that while `LowestPriceHistory` contains the actual lowest-price amounts as derived from `StoreProduct` and `PriceHistory`, these derived records are still recomputable from source truth. This means:
-
-1. **Source of truth remains**: The actual prices are stored in `StoreProduct` and `PriceHistory`
-2. **Derived can be recomputed**: `LowestPriceHistory` records are repairable and can be recalculated from source data
-3. **No data loss**: If you need the exact price from a specific store product, you must query `StoreProduct` or `PriceHistory`
-
-**Important clarification**: Under D-017 and I-021, recomputing history from the currently linked StoreProducts can add, replace, or remove earlier price, winner, and availability-gap events. This means that when a relink operation affects the historical price records for affected ProductIdentities, the `LowestPriceHistory` must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
-
-**Note**: For an updated and consistent description of what `LowestPriceHistory` contains (including actual price amounts), please refer to [docs/negative-test.md](negative-test.md).
-
-## Regression Test Scenario
-
-To properly test that the implementation correctly handles all scenarios, we need a more comprehensive regression test:
-
-### Planned Scenario: Price Change Impact on Lowest Price History
-1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00)
-2. Link both sellers to the same ProductIdentity  
-3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
-4. Change the losing seller's price from 100.00 to 95.00 
-5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
-6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
-7. Verify that the losing StoreProduct still shows 95.00 in its current price
-8. Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries
-
-This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.
-
-### Updated Test Scenario for Feedback Compliance
-
-The following scenario better demonstrates that losing prices are preserved in PriceHistory:
-
-1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00) 
-2. Link both sellers to the same ProductIdentity
-3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
-4. Change the losing seller's price from 100.00 to 95.00 
-5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
-6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
-7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
-8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
-
-This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.
+See [negative-test.md](negative-test.md) for **unexecuted** scenarios demonstrating preservation of a losing seller's price history, historical recomputation after relink, and availability-only transitions. They are specifications, **not evidence of tests having passed**.

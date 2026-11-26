@@ -38,7 +38,6 @@ The project is in its initial phase, with the following key components:
 3. Implement API endpoints
 4. Add tests for all components
 5. Set up monitoring and logging
-6. Add user authentication and authorization system
 
 ## Known Issues
 

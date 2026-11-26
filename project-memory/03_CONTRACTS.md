@@ -10,17 +10,28 @@ This document defines the API contracts for Vareindeks.
 - No routine human approval queue
 - No personalization or user-specific data
 
+## `/v1/prices`
+
+- Returns price information for StoreProducts
+- Includes current price, historical price changes, and lowest price history
+- Derived from linked StoreProducts
+
+## `/v1/stores`
+
+- Returns information about stores
+- Each store is an independently priced seller
+- No physical inventory sites
+
+## `/v1/data-sources`
+
+- Returns information about data sources
+- Feed/connector belongs to one Store
+
 ## `/v1/store-products`
 
 - Returns information about store products
 - Includes reported GTIN, SKU, title, URL and status
 - Links to ProductIdentity
-
-## `/v1/price-history`
-
-- Returns price history for a given StoreProduct
-- Append-only material changes referencing StoreProduct UUID
-- Initial price event, no duplicate unchanged polls
 
 ## Authentication
 

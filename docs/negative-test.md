@@ -57,18 +57,20 @@ This is a **historical rebuild**, not an invented source-price observation at re
 
 **Fixture steps:**
 1. Ingest two StoreProducts linked to one ProductIdentity, with known comparable currency and coverage: `sp_a = 90.00 NOK` and `sp_b = 100.00 NOK`, both initially available.
+2. Keep `sp_b` eligible across the transition by ensuring it remains available throughout the test.
 
 **Scenario steps:**
 1. Establish the cached winner (e.g., `sp_a = 90.00 NOK`)
 2. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
 3. Let the normal refresh process complete and verify that:
-   - `CurrentLowestPrice` no longer presents `sp_a` as eligible
+   - `CurrentLowestPrice` selects `sp_b` at 100.00 NOK as the winner (not sp_a)
    - `LowestPriceHistory` records the relevant winner/gap transition
 
 **Required assertions:**
 - The system uses available observation/coverage evidence; no historical availability is fabricated where the source does not establish it.
 - **Neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
 - The refresh process correctly updates both `CurrentLowestPrice` and `LowestPriceHistory` based on the availability transition.
+- Rebuilding history from preserved evidence reproduces the same transition and leaves both sellers' raw prices and PriceHistory unchanged.
 
 ---
 

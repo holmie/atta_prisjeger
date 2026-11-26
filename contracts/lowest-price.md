@@ -24,7 +24,7 @@ This document defines the contract for computing and storing the lowest price in
 - History is bounded to 24 months plus pre-cutoff checkpoint
 - Records material lowest-price, winner Store ID/name and availability-gap transitions
 - Carry forward known prices within covered intervals, never pre-observation or known unavailable gaps
-- Historical seller store_id, store_name_snapshot preserved without a current Store-name JOIN
+- Historical seller store_id, store_product_id, and store_name_snapshot preserved without a current Store-name JOIN
 
 ## Data Flow
 
@@ -37,7 +37,7 @@ This document defines the contract for computing and storing the lowest price in
 
 Both CurrentLowestPrice and LowestPriceHistory projections are refreshed according to this single authoritative rule:
 
-**When any change affects the set of currently linked StoreProducts for a ProductIdentity, refresh both projections for that identity.**
+**When any material price change, availability/eligibility transition, or membership change affects the set of currently linked StoreProducts for a ProductIdentity, refresh both projections for that identity.**
 
 This includes:
 - Material price changes in currently linked StoreProducts

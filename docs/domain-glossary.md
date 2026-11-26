@@ -70,7 +70,7 @@ An event-based, derived timeline of **material changes to the historical minimum
 - There is **no daily insert** solely because another day passed with an unchanged minimum.
 - Historical results are recomputed from **currently linked StoreProducts** and their preserved source observations (D-017), within the retained horizon. A merge, split or relink can **insert, replace or remove earlier derived events even if today's winner and amount do not change**.
 - Availability-only changes may switch the winner or create/close a coverage gap **without inserting a PriceHistory price event**.
-- Retain 24 months of material events with the required pre-cutoff checkpoint. Preserve historical seller IDs and name snapshots without relying on today's Store name.
+- Retain 24 months of material events with the required pre-cutoff checkpoint. Preserve historical seller IDs, StoreProduct IDs and name snapshots without relying on today's Store name.
 
 Rebuilding either derived projection never modifies raw per-seller prices or PriceHistory.
 

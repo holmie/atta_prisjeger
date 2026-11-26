@@ -24,7 +24,7 @@ This document defines the contract for computing and storing the lowest price in
 - History is bounded to 24 months plus pre-cutoff checkpoint
 - Records material lowest-price, winner Store ID/name and availability-gap transitions
 - Carry forward known prices within covered intervals, never pre-observation or known unavailable gaps
-- Historical seller store_id, store_product_id, store_name_snapshot preserved without a current Store-name JOIN
+- Historical seller store_id, store_name_snapshot preserved without a current Store-name JOIN
 
 ## Data Flow
 
@@ -35,12 +35,20 @@ This document defines the contract for computing and storing the lowest price in
 
 ## Refresh Rules
 
-Both CurrentLowestPrice and LowestPriceHistory projections are refreshed according to these explicit rules:
+Both CurrentLowestPrice and LowestPriceHistory projections are refreshed according to this single authoritative rule:
 
-1. **Refresh triggers for both projections:**
-    - Material price changes in currently linked StoreProducts
-    - Availability/eligibility transitions that can change the current or historical result (including when a cached winner becomes unavailable at an unchanged price)
-    - Identity merge/split/relink operations affecting currently linked StoreProducts
+**When any change affects the set of currently linked StoreProducts for a ProductIdentity, refresh both projections for that identity.**
+
+This includes:
+- Material price changes in currently linked StoreProducts
+- Availability/eligibility transitions that can change the current or historical result (including when a cached winner becomes unavailable at an unchanged price)
+- Identity merge/split/relink operations affecting currently linked StoreProducts
+- Any change that affects which StoreProducts are considered "currently linked" to a ProductIdentity
+
+This rule ensures that both projections are always consistent with each other and with the current state of linked StoreProducts, including cases where:
+1. A StoreProduct is relinked from one ProductIdentity to another (involving both identities)
+2. A previously winning StoreProduct becomes unavailable at an unchanged price
+3. Any change that affects the membership of currently linked StoreProducts for any identity
 
 ## Validation Requirements
 

@@ -14,7 +14,7 @@ These cases exercise `project-memory/02_INVARIANTS.md` (especially I-009, I-010,
 
 **Scenario steps:**
 1. At `t0`, ingest `sp_a = 100.00 NOK` and `sp_b = 90.00 NOK`. Run the normal minimum derivation. `sp_b` is the winner.
-2. At `t1 > t0`, ingest a material price change for the **losing** `sp_a` from `100.00` to `95.00 NOK`, without changing eligibility or availability. Run derivation again.
+2. At `t1 > t0`, ingest a material price change for the **losing** `sp_a` from `100.00` to `95.00 NOK`, without changing eligibility or availability.
 
 **Required assertions:**
 
@@ -59,12 +59,16 @@ This is a **historical rebuild**, not an invented source-price observation at re
 1. Ingest two StoreProducts linked to one ProductIdentity, with known comparable currency and coverage: `sp_a = 90.00 NOK` and `sp_b = 100.00 NOK`, both initially available.
 
 **Scenario steps:**
-1. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
-2. Recompute affected current and historical minimum results. If `sp_b` remains eligible, it becomes the 100.00 NOK winner. If no offer remains eligible, represent the coverage gap rather than inventing a lowest price.
-3. Assert that `LowestPriceHistory` records the relevant winner/gap transition and `CurrentLowestPrice` no longer presents `sp_a` as eligible.
-4. Assert that **neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
+1. Establish the cached winner (e.g., `sp_a = 90.00 NOK`)
+2. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
+3. Let the normal refresh process complete and verify that:
+   - `CurrentLowestPrice` no longer presents `sp_a` as eligible
+   - `LowestPriceHistory` records the relevant winner/gap transition
 
-The system must use available observation/coverage evidence; no historical availability is fabricated where the source does not establish it.
+**Required assertions:**
+- The system uses available observation/coverage evidence; no historical availability is fabricated where the source does not establish it.
+- **Neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
+- The refresh process correctly updates both `CurrentLowestPrice` and `LowestPriceHistory` based on the availability transition.
 
 ---
 

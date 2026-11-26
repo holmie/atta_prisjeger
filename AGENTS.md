@@ -41,6 +41,7 @@ This project uses the following canonical documents:
 - `project-memory/04_CURRENT_STATE.md` - Current state documentation
 - `contracts/lowest-price.md` - Lowest price calculation contract
 - `docs/adr-template.md` - Architecture Decision Record template
+- `docs/domain-glossary.md` - Domain model definitions and relationships
 
 ## OpenCode/Codex Workflow
 

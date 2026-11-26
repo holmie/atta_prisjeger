@@ -72,6 +72,8 @@ This decision is **Proposed** and pending approval by the project lead based on:
 - Accepted design defaults in project-memory/01_DECISIONS.md
 - Hard invariants in project-memory/02_INVARIANTS.md
 
+**Note:** As of the latest review, this ADR has been reviewed and is ready for human merge. The document now describes the architecture, planned verification (rather than claiming implementation), and a clear process for revisiting decisions without stealth refactors.
+
 ## 8. Change Control and Revisit Policy
 
 This ADR may be revisited under the following conditions:

@@ -61,6 +61,16 @@ This repository is managed by OpenCode/Codex agents with the following workflow:
 6. Create PR with title starting `PJ-XXXX: <title>` (where XXXX is the current assigned task ID)
 7. Do not merge or mark DONE until human operator reviews and merges
 
+## Verification Status
+
+This project's architecture has been documented in ADR-001 and is currently in a **proposed** state pending project owner approval. The following core architectural elements have been defined:
+
+- Django/DRF/PostgreSQL 16 control plane with outbound-only Python agents
+- No mandatory broker/search cluster (Redis/Celery/OpenSearch/S3)
+- Django admin plus custom operator views
+- Source-scoped push ingest
+- Atta independence through RESTful interfaces
+
 ## Negative Test
 
 This repository currently contains no application code to check for cross-repo dependencies. When such files exist, a future/repeatable dependency inspection (e.g., imports, dependency manifests, environment/database configuration) will be used to verify independence from the Atta system. Atta may be documented as an independent consumer.

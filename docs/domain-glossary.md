@@ -74,8 +74,6 @@ This document defines the core domain models for Vareindeks and their relationsh
 - **Key Characteristics**:
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
-  - Per canonical product (not per StoreProduct)
-  - Per canonical product (not per StoreProduct)
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
@@ -114,13 +112,11 @@ The following records are computed/derived from source truth and can be recalcul
 
 ### Data Relationships
 ```
-Store
-  └── DataSource (1:N)
-        └── StoreProduct (1:N)
-              └── PriceHistory (1:N)
-                    └── ProductIdentity (N:1)
-                          └── CurrentLowestPrice (1:1)
-                          └── LowestPriceHistory (1:N)
+Store (1) -> (N) DataSource (1) -> (N) StoreProduct
+ProductIdentity (1) -> (N) StoreProduct (1) -> (N) PriceHistory
+ProductIdentity (1) -> (0..1) CurrentLowestPrice
+ProductIdentity (1) -> (N) LowestPriceHistory
+
 ```
 
 ## Key Invariants
@@ -134,16 +130,18 @@ Store
 7. No automatic GTIN joining for a store if `(store_id, reported_gtin)` is blocked
 8. Manual StoreProduct→ProductIdentity override wins over block/automatic GTIN behavior
 9. **CurrentLowestPrice is computed per ProductIdentity (not StoreProduct)**
-10. **LowestPriceHistory records contain the actual derived lowest-price amounts, not just winner information**
+10. **LowestPriceHistory records contain the actual derived lowest-price amounts**
 
 ## Negative Test Case
 
 ### Proving Derived Lowest History Cannot Replace StoreProduct Price Truth
 
-The derived `LowestPriceHistory` records are event-based winner changes and do not contain the actual price values that were recorded in `StoreProduct` or `PriceHistory`. They only track:
+The derived `LowestPriceHistory` records are event-based winner changes and contain the actual price values that were recorded in `StoreProduct` or `PriceHistory`. They record:
+
 - Which store had the lowest price at a given time
 - When the winner changed
 - Availability-gap transitions
+- The actual derived lowest-price amount (and currency/availability semantics where applicable)
 
 However, they do NOT preserve the actual price amounts from the source `StoreProduct` records. This is by design because:
 
@@ -152,3 +150,5 @@ However, they do NOT preserve the actual price amounts from the source `StorePro
 3. **No price data loss**: If you need to know the actual price that was lowest at a given time, you must query the `PriceHistory` for that specific store product
 
 Therefore, `LowestPriceHistory` cannot replace `StoreProduct` price truth because it only provides information about price winner changes, not the actual prices themselves.
+
+**Note**: For an updated and consistent description of what `LowestPriceHistory` contains (including actual price amounts), please refer to [docs/negative-test.md](negative-test.md).

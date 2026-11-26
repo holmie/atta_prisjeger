@@ -105,7 +105,7 @@ This document defines the core domain models for Vareindeks and their relationsh
 The following records represent source truth and are immutable or directly derived from source data:
 - **StoreProduct**: Contains the original price information as reported by the source
 - **PriceHistory**: Append-only record of actual price events (not estimates)
-- **ProductIdentity**: Canonical product identity record with GTIN information
+- **ProductIdentity**: Canonical identity state that can change through audited overrides, merges, splits, and relinks
 
 ### Derived Data
 The following records are computed/derived from source truth and can be recalculated:
@@ -168,6 +168,8 @@ The key point is that while `LowestPriceHistory` contains the actual lowest-pric
 2. **Derived can be recomputed**: `LowestPriceHistory` records are repairable and can be recalculated from source data
 3. **No data loss**: If you need the exact price from a specific store product, you must query `StoreProduct` or `PriceHistory`
 
+**Important clarification**: Under D-017 and I-021, recomputing history from the currently linked StoreProducts can add, replace, or remove earlier price, winner, and availability-gap events. This means that when a relink operation affects the historical price records for affected ProductIdentities, the `LowestPriceHistory` must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
+
 **Note**: For an updated and consistent description of what `LowestPriceHistory` contains (including actual price amounts), please refer to [docs/negative-test.md](negative-test.md).
 
 ## Regression Test Scenario
@@ -176,9 +178,12 @@ To properly test that the implementation correctly handles all scenarios, we nee
 
 ### Planned Scenario: Price Change Impact on Lowest Price History
 1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00)
-2. Run derivation to establish baseline lowest price history
-3. Change the losing seller's price from 100.00 to 95.00 
-4. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
-5. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+2. Link both sellers to the same ProductIdentity  
+3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
+4. Change the losing seller's price from 100.00 to 95.00 
+5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
+6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+7. Verify that the losing StoreProduct still shows 95.00 in its current price
+8. Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries
 
 This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.

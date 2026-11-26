@@ -1,46 +1,52 @@
-# 03 — API contracts
+# 03 — API Contracts
 
-This document defines the API contracts for Vareindeks.
+This document defines the canonical API contracts for Vareindeks.
 
-## `/v1/products`
+## Core Models
 
-- Returns ProductIdentity objects (including those with NULL GTIN)
-- Searchable by GTIN, title and other facets
-- Exact GTIN/filters outrank popularity
-- No routine human approval queue
-- No personalization or user-specific data
+### ProductIdentity
+- Stable UUID
+- Nullable unique canonical GTIN
+- Variant metadata
+- Searchable via PostgreSQL trigram index
 
-## `/v1/prices`
+### StoreProduct
+- Stable UUID
+- `(source_id, external_key)` unique constraint
+- FK to ProductIdentity (NOT NULL)
+- Reported GTIN/SKU retained
+- Current Decimal price nullable
+- URL/status information
 
-- Returns price information for StoreProducts
-- Includes current price, historical price changes, and lowest price history
-- Derived from linked StoreProducts
+### PriceHistory
+- Append-only material changes
+- References StoreProduct UUID
+- Records initial valid price + material changes only
+- Unchanged polls refresh freshness only
 
-## `/v1/stores`
+## API Endpoints
 
-- Returns information about stores
-- Each store is an independently priced seller
-- No physical inventory sites
+### `/v1/products`
+- Returns ProductIdentity objects (including GTIN=NULL provisional objects)
+- Never raw listing pseudo-items
+- Searchable by GTIN, facets and text search
 
-## `/v1/data-sources`
+### `/v1/store-products`
+- Returns StoreProduct objects with linked ProductIdentity
+- Price comparison derived from linked StoreProducts
+- Supports filtering by source_id, store_id, etc.
 
-- Returns information about data sources
-- Feed/connector belongs to one Store
+## Data Flow
 
-## `/v1/store-products`
+- Source-authorized, valid records automatically publish
+- Individual bad rows are isolated
+- No routine import approval queue
+- Job queue, scheduling, logs, leases and agent/push ingestion are observable through admin
 
-- Returns information about store products
-- Includes reported GTIN, SKU, title, URL and status
-- Links to ProductIdentity
+## Security & Compliance
 
-## Authentication
-
-- API keys required for read access
-- Operator sessions with administrative privileges
-- Agent/run credential, push source credential with noninterchangeable scopes
-
-## Error Handling
-
-- Standard HTTP status codes
-- Error messages in JSON format
-- No sensitive information exposed in responses
+- All network/data work has bounded bytes, memory, time, query size and concurrency
+- Explicit 403/429 respects access policy
+- Agent packages use outbound HTTPS only
+- Installed allowlisted connectors; server may not distribute executable code
+- Remote servers never send arbitrary executable Python code

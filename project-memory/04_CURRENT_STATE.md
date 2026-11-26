@@ -43,4 +43,3 @@ The project is in its initial phase, with the following key components:
 
 - No current implementation of the full feature set
 - Missing data validation and error handling
-- No user authentication or authorization system

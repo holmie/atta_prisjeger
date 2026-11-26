@@ -136,19 +136,19 @@ ProductIdentity (1) -> (N) LowestPriceHistory
 
 ### Proving Derived Lowest History Cannot Replace StoreProduct Price Truth
 
-The derived `LowestPriceHistory` records are event-based winner changes and contain the actual price values that were recorded in `StoreProduct` or `PriceHistory`. They record:
+The derived `LowestPriceHistory` records are event-based winner changes that contain the actual derived lowest-price amounts computed from source data. They record:
 
 - Which store had the lowest price at a given time
 - When the winner changed
 - Availability-gap transitions
 - The actual derived lowest-price amount (and currency/availability semantics where applicable)
 
-However, they do NOT preserve the actual price amounts from the source `StoreProduct` records. This is by design because:
+However, `LowestPriceHistory` cannot replace `StoreProduct` price truth because it only provides information about price winner changes and their associated actual prices, not the raw source price data itself. 
+
+The key point is that while `LowestPriceHistory` contains the actual lowest-price amounts as derived from `StoreProduct` and `PriceHistory`, these derived records are still recomputable from source truth. This means:
 
 1. **Source of truth remains**: The actual prices are stored in `StoreProduct` and `PriceHistory`
-2. **Derived only tracks winners**: `LowestPriceHistory` tracks who was the cheapest, not what the exact price was
-3. **No price data loss**: If you need to know the actual price that was lowest at a given time, you must query the `PriceHistory` for that specific store product
-
-Therefore, `LowestPriceHistory` cannot replace `StoreProduct` price truth because it only provides information about price winner changes, not the actual prices themselves.
+2. **Derived can be recomputed**: `LowestPriceHistory` records are repairable and can be recalculated from source data
+3. **No data loss**: If you need the exact price from a specific store product, you must query `StoreProduct` or `PriceHistory`
 
 **Note**: For an updated and consistent description of what `LowestPriceHistory` contains (including actual price amounts), please refer to [docs/negative-test.md](negative-test.md).

@@ -1,28 +1,40 @@
-# 04 — Current State
+# 04 — Current state
+
+## Overview
+
+This document provides a snapshot of the current state of the Vareindeks project. It is updated with each significant change to the project.
 
 ## Project Status
 
-This is the initial setup of the Vareindeks repository. The project is in its early stages with the foundational architecture and documentation in place.
-
-## Architecture
+The project is in its initial phase, with the following key components:
 
 - Django/DRF/PostgreSQL 16 control plane
 - Outbound-only Python agents
 - Source-scoped push ingest
-- No inbound ports (runs on low-powered Linux environments like WSL/VPS)
+- No Atta coupling or shared database
+- No parallel Offer/Listing/search-pseudo-product model
+- No mandatory manual import approval
+- No local inventory-location tracking
 
-## Implemented Components
+## Key Features
 
-- AGENTS.md - Agent architecture and operational constraints
-- Project memory files:
-  - 00_CONTEXT.md - Project context and model definitions
-  - 01_DECISIONS.md - Design decisions and ADRs
-  - 02_INVARIANTS.md - Hard invariants requiring tests
-  - 03_CONTRACTS.md - API contracts
+- ProductIdentity objects are created for every valid StoreProduct
+- StoreProduct UUID, source external key and mandatory ProductIdentity FK ensure reimport idempotency
+- PriceHistory records append-only material changes referencing StoreProduct UUID
+- Source fields including reported_gtin never overwritten
+- BlockedStoreGTIN prevents automatic join for a specific store only
+- Manual StoreProductIdentityOverride wins over block/automatic GTIN
 
 ## Next Steps
 
-- Implementation of core models (Store, DataSource, ProductIdentity, StoreProduct, PriceHistory)
-- Agent implementation for data ingestion
-- API endpoint development
-- Testing and validation of invariants
+1. Implement core models as defined in project-memory/01_DECISIONS.md and project-memory/02_INVARIANTS.md
+2. Develop data ingestion pipelines
+3. Implement API endpoints
+4. Add tests for all components
+5. Set up monitoring and logging
+
+## Known Issues
+
+- No current implementation of the full feature set
+- Missing data validation and error handling
+- No user authentication or authorization system

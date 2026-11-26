@@ -25,7 +25,7 @@ This document defines the core domain models for Vareindeks and their relationsh
 
 ### ProductIdentity
 - **Definition**: Searchable UUID with nullable UNIQUE valid GTIN and variant metadata
-- **Purpose**: Represents canonical products that can be linked across different stores
+- **Purpose**: Represents canonical products that can be linked across different stores. This is a canonical identity record, not a listing.
 - **Properties**:
   - Stable UUID (primary key)
   - Canonical valid GTIN (nullable unique string, not primary key)
@@ -97,7 +97,7 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - **A relink can change an earlier winner or coverage gap while leaving today's winner unchanged**
+  - **A relink can change an earlier winner or coverage gap while leaving today's winner unchanged**. However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same.
 
 ## Source Truth vs Derived Data
 
@@ -147,7 +147,7 @@ ProductIdentity (1) -> (N) LowestPriceHistory
 A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
 - Historical results for affected identities must be refreshed when their linked products change
 - This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
-- If the current winner remains unchanged, no new events are added to LowestPriceHistory
+- **However, when a relink operation affects the historical price records for affected ProductIdentities, the LowestPriceHistory must be recomputed to reflect the new state of the cheapest StoreProducts, even if the current winner remains the same**
 
 ## Negative Test Case
 

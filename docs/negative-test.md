@@ -26,6 +26,19 @@ To verify that `LowestPriceHistory` cannot replace `StoreProduct` price truth:
 2. Compare with `LowestPriceHistory` which now shows the exact price amount (90.00)
 3. Confirm that `LowestPriceHistory` does contain the exact price amount
 
+### Updated Test Scenario for Feedback Compliance
+
+The following scenario better demonstrates that losing prices are preserved in PriceHistory:
+
+1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00) 
+2. Link both sellers to the same ProductIdentity
+3. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
+4. Change the losing seller's price from 100.00 to 95.00 
+5. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
+6. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+7. **Verify that the losing StoreProduct still shows 95.00 in its current price**
+8. **Verify that the losing StoreProduct's PriceHistory still contains both 100.00 and 95.00 entries**
+
 ### Conclusion
 
 This demonstrates that:

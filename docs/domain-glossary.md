@@ -62,12 +62,10 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Records initial valid price and material changes only
   - No duplicate unchanged polls (refreshes freshness only)
   - Append-only storage
-  - **Updated on availability transitions that change the winner or open/closed coverage gaps**
 - **Key Characteristics**:
   - Atomic and idempotent recording of price events
   - Material changes only (unchanged polls refresh freshness)
   - Initial price event tracking
-  - Updated not only on material price changes but also on availability transitions that change the winner or open/closed coverage gaps
 
 ## Derived Models
 
@@ -83,24 +81,22 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - Updated on availability transitions that change the winner or open/closed coverage gaps
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
 - **Purpose**: Tracks historical changes in the cheapest price for each product across stores
 - **Properties**:
-  - Records material lowest-price, winner Store ID/name and availability-gap transitions
+  - Records material lowest-price, winner Store ID/name
   - Carry forward known prices within covered intervals
   - Never pre-observation or known unavailable gaps
   - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
-  - Updated on material price changes, availability transitions, and merge, split, or relink operations that affect the cheapest StoreProduct
+  - Updated on material price changes, and merge, split, or relink operations that affect the cheapest StoreProduct
 - **Key Characteristics**:
   - Event-based tracking of price winner changes
   - Historical seller store_id, store_product_id, store_name_snapshot preserved
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
-  - Updated on availability transitions that change the winner or open/closed coverage gaps
 
 ## Source Truth vs Derived Data
 

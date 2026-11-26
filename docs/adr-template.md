@@ -27,6 +27,9 @@
 ## 7. Authority Rule
 
 [Define the rule that determines who has authority to make or approve this decision.]
+- Only project owners may approve ADRs
+- Agents may propose ADRs but may not mark them accepted or change an accepted contract on their own
+- All changes to accepted contracts must be documented in a corresponding ADR and coordinated with all stakeholders
 
 ## 8. Validation
 
@@ -43,3 +46,5 @@ An empty sample ADR is valid and has a clear authority rule.
 ## 11. Negative Test
 
 Reject undocumented changes to accepted contracts.
+- If a PR changes an accepted contract/invariant without linking a corresponding proposed-and-approved ADR and updating references, it must be rejected
+- This can be validated by ensuring all contract changes are properly referenced in the ADR and that the PR includes the necessary documentation of the change

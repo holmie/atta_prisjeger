@@ -9,7 +9,7 @@ This test demonstrates that `LowestPriceHistory` records are event-based winner 
 2. Create a `PriceHistory` entry for this price
 3. Create another `StoreProduct` with the same product but different store, price 90.00
 4. Create a `PriceHistory` entry for this price
-5. Create `LowestPriceHistory` record tracking that second store was cheapest
+5. Run derivation to establish baseline lowest price history (store with ID 2 is cheapest)
 
 ### Expected Behavior
 
@@ -51,3 +51,10 @@ The original documentation incorrectly stated that `LowestPriceHistory` did not 
 1. `LowestPriceHistory` records contain the actual derived lowest-price amounts
 2. These amounts are computed from `StoreProduct` and `PriceHistory` data
 3. The derived records are still repairable/recomputable from source data, but now include the actual price values
+
+### Additional Clarification on Relink Impact
+
+A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
+1. Historical results for affected identities must be refreshed when their linked products change
+2. This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
+3. If the current winner remains unchanged, no new events are added to LowestPriceHistory

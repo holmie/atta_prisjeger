@@ -76,7 +76,7 @@ This document defines the core domain models for Vareindeks and their relationsh
   - References Store UUID, StoreProduct UUID and store_name_snapshot
   - Updated on material price changes
   - Contains the actual derived lowest-price amount
-  - Refreshed on merge, split, or relink of ProductIdentity
+  - Refreshed on merge, split, or relink of ProductIdentity that affects the cheapest StoreProduct
 - **Key Characteristics**:
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
@@ -97,6 +97,7 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
   - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
+  - **A relink can change an earlier winner or coverage gap while leaving today's winner unchanged**
 
 ## Source Truth vs Derived Data
 
@@ -104,7 +105,7 @@ This document defines the core domain models for Vareindeks and their relationsh
 The following records represent source truth and are immutable or directly derived from source data:
 - **StoreProduct**: Contains the original price information as reported by the source
 - **PriceHistory**: Append-only record of actual price events (not estimates)
-- **ProductIdentity**: Canonical product identity with GTIN information
+- **ProductIdentity**: Canonical product identity record with GTIN information
 
 ### Derived Data
 The following records are computed/derived from source truth and can be recalculated:
@@ -140,6 +141,13 @@ ProductIdentity (1) -> (N) LowestPriceHistory
 8. Manual StoreProduct→ProductIdentity override wins over block/automatic GTIN behavior
 9. **CurrentLowestPrice is computed per ProductIdentity (not StoreProduct)**
 10. **LowestPriceHistory records contain the actual derived lowest-price amounts**
+
+## Relink Impact on History
+
+A relink operation can change an earlier winner or coverage gap while leaving today's winner unchanged. In such cases:
+- Historical results for affected identities must be refreshed when their linked products change
+- This ensures that if a previously non-cheapest product becomes the cheapest due to a relink, the history is updated appropriately
+- If the current winner remains unchanged, no new events are added to LowestPriceHistory
 
 ## Negative Test Case
 

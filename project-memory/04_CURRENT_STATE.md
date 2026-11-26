@@ -15,6 +15,7 @@ The project is in its initial phase, with the following key components:
 - No parallel Offer/Listing/search-pseudo-product model
 - No mandatory manual import approval
 - No local inventory-location tracking
+- Core architecture is monolithic Django/DRF/PostgreSQL control plane with outbound-only agents; no mandatory broker/search cluster
 
 ## Design Intentions (as defined in project-memory/01_DECISIONS.md)
 
@@ -30,6 +31,7 @@ The project is in its initial phase, with the following key components:
 - Basic project structure and repository setup
 - Product charter documentation
 - Core project memory files (context, decisions, invariants, contracts, current state)
+- Core architecture ADR (ADR-001) documenting monolithic Django/DRF/PostgreSQL control plane with outbound-only agents
 
 ## Next Steps
 

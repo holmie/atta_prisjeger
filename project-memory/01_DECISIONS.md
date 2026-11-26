@@ -21,6 +21,7 @@
 | D-017 | Product historical minimum is computed for **currently linked StoreProducts**, with coverage gaps | Simple transparent v1 query semantics; raw history never rewritten |
 | D-018 | Documentation, ADR, PR evidence and project memory are versioned in repo | No invisible chat memory, tasks done only after merge |
 
+
 **Accepted after v4 (24 November 2026)**
 
 - Working name **Vareindeks**, standalone repo; no shared Atta database or user system.

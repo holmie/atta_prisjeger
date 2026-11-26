@@ -9,7 +9,7 @@ This document defines the contract for computing and storing the lowest price in
 ### CurrentLowestPrice
 - One-to-one cache of the current lowest price
 - References Store UUID, StoreProduct UUID and store_name_snapshot
-- Updated on material price changes
+- Updated on material price changes or availability transitions that can change the current result
 
 ### LowestPriceHistory
 - Event-based record of winner changes
@@ -17,7 +17,7 @@ This document defines the contract for computing and storing the lowest price in
 - Availability-gap transitions
 - Carry forward known prices within covered intervals
 - Never pre-observation or known unavailable gaps
-- Updated on availability transitions that change the winner or open/closed coverage gaps
+- Updated on availability transitions that change the winner or open/closed coverage gaps, or when price history events change the result
 
 ## Requirements
 
@@ -28,7 +28,27 @@ This document defines the contract for computing and storing the lowest price in
 
 ## Data Flow
 
-- Derived from StoreProduct price history
+- Derived from StoreProduct price history, including preserved price observations and supported availability and coverage evidence for currently linked offers
 - Computed for currently linked StoreProducts
 - With coverage gaps (simple transparent v1 query semantics)
 - Raw history never rewritten
+
+## Refresh Rules
+
+Both CurrentLowestPrice and LowestPriceHistory projections are refreshed according to these explicit rules:
+
+1. **CurrentLowestPrice refresh triggers:**
+   - Material price changes in currently linked StoreProducts
+   - Availability/eligibility transitions that can change the current result (including when a cached winner becomes unavailable at an unchanged price)
+   - Identity merge/split/relink operations affecting currently linked StoreProducts
+
+2. **LowestPriceHistory refresh triggers:**
+   - Price history events that change the historical minimum or winner
+   - Availability/eligibility transitions that change the historical result or open/close coverage gaps
+   - Identity merge/split/relink operations affecting currently linked StoreProducts
+
+## Validation Requirements
+
+- When a cached winner becomes unavailable at an unchanged price, the refresh must yield a new current winner or no eligible result
+- Rebuilding history must reproduce the winner or gap transition without a new PriceHistory event
+- Historical rebuilds must not modify raw per-seller prices or PriceHistory records

@@ -21,4 +21,11 @@
 | D-017 | Product historical minimum is computed for **currently linked StoreProducts**, with coverage gaps | Simple transparent v1 query semantics; raw history never rewritten |
 | D-018 | Documentation, ADR, PR evidence and project memory are versioned in repo | No invisible chat memory, tasks done only after merge |
 
+**Accepted after v4 (24 November 2026)**
+
+- Working name **Vareindeks**, standalone repo; no shared Atta database or user system.
+- Derived `CurrentLowestPrice` and **event-based** `LowestPriceHistory` with source Store ID, StoreProduct ID and copied historical Store name.
+- 24-month price histories with required boundary checkpoint; raw feeds 14 days, verbose logs 90 days, raw ranking 7 days, aggregate ranking 90 days default. Safe StoreProduct retirement after >=180 days and no dependent retained records, not because of partial feeds.
+- Source of truth remains StoreProduct plus per-store PriceHistory; derived caches are repairable.
+
 **Do not silently revert v4 to v3.1.** Breaking change to identity model/API requires a separate reviewed ADR and updated tests, backlog and contracts. Open empirical choices: source licenses, exact transaction size, perf budget, index plan, ranking coefficients, matching without GTIN beyond safe rules.

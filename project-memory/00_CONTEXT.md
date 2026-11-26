@@ -34,4 +34,4 @@ There is NO `Listing` model, `Offer` model, link join model or standalone unmatc
 - No daily insert if winner/amount unchanged
 - Retain 24 months of material price events plus required pre-cutoff checkpoints
 - Logs/raw/ranking expire, incomplete feeds never bulk delete
-- Read contracts/lowest-price.md and contracts/lifecycle.md when relevant
+- Read contracts/lowest-price.md when relevant

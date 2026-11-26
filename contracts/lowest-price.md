@@ -37,15 +37,10 @@ This document defines the contract for computing and storing the lowest price in
 
 Both CurrentLowestPrice and LowestPriceHistory projections are refreshed according to these explicit rules:
 
-1. **CurrentLowestPrice refresh triggers:**
-   - Material price changes in currently linked StoreProducts
-   - Availability/eligibility transitions that can change the current result (including when a cached winner becomes unavailable at an unchanged price)
-   - Identity merge/split/relink operations affecting currently linked StoreProducts
-
-2. **LowestPriceHistory refresh triggers:**
-   - Price history events that change the historical minimum or winner
-   - Availability/eligibility transitions that change the historical result or open/close coverage gaps
-   - Identity merge/split/relink operations affecting currently linked StoreProducts
+1. **Refresh triggers for both projections:**
+    - Material price changes in currently linked StoreProducts
+    - Availability/eligibility transitions that can change the current or historical result (including when a cached winner becomes unavailable at an unchanged price)
+    - Identity merge/split/relink operations affecting currently linked StoreProducts
 
 ## Validation Requirements
 

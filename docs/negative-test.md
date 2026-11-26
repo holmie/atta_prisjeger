@@ -8,12 +8,13 @@ These cases exercise `project-memory/02_INVARIANTS.md` (especially I-009, I-010,
 
 **Failure being excluded:** an implementation saves only the cheapest seller's prices, making `LowestPriceHistory` look correct while silently discarding another StoreProduct's source prices.
 
-**Fixture and actions (through the normal ingestion entry point):**
-
+**Fixture steps:**
 1. Create two distinct Stores, each with its own DataSource. Ingest one StoreProduct per source. Record their **distinct StoreProduct UUIDs** as `sp_a` and `sp_b`; never substitute Store IDs for StoreProduct IDs.
 2. Link both StoreProducts to the **same ProductIdentity**. Use the same known currency (e.g. NOK), simultaneously available offers, and overlapping known coverage.
-3. At `t0`, ingest `sp_a = 100.00 NOK` and `sp_b = 90.00 NOK`. Run the normal minimum derivation. `sp_b` is the winner.
-4. At `t1 > t0`, ingest a material price change for the **losing** `sp_a` from `100.00` to `95.00 NOK`, without changing eligibility or availability. Run derivation again.
+
+**Scenario steps:**
+1. At `t0`, ingest `sp_a = 100.00 NOK` and `sp_b = 90.00 NOK`. Run the normal minimum derivation. `sp_b` is the winner.
+2. At `t1 > t0`, ingest a material price change for the **losing** `sp_a` from `100.00` to `95.00 NOK`, without changing eligibility or availability. Run derivation again.
 
 **Required assertions:**
 
@@ -29,6 +30,7 @@ This is the negative test: **a matching derived winner is insufficient** unless 
 
 **Failure being excluded:** code that skips historical recomputation whenever the *current* winning seller remains unchanged.
 
+**Fixture steps:**
 Use known, overlapping availability and the same currency for all examples. Ingest the observations and derive history for two canonical identities `A` and `B`:
 
 | StoreProduct | Initially linked identity | At t0 | At t1 (current) |
@@ -37,8 +39,7 @@ Use known, overlapping availability and the same currency for all examples. Inge
 | `sp_y` | A | 90.00 | 85.00 |
 | `sp_z` | B | 120.00 | 110.00 |
 
-Before relink, the expected minimum for A is `sp_y / 90.00` at t0 and `sp_x / 80.00` at t1. For B it is `sp_z / 120.00` at t0 and `sp_z / 110.00` at t1.
-
+**Scenario steps:**
 Now **relink `sp_y` from A to B** through the supported audited identity-correction path. Do not change prices or availability.
 
 **Required assertions:**
@@ -54,11 +55,14 @@ This is a **historical rebuild**, not an invented source-price observation at re
 
 **Failure being excluded:** a cached winner remains the cheapest even after going unavailable because its numeric price did not change.
 
+**Fixture steps:**
 1. Ingest two StoreProducts linked to one ProductIdentity, with known comparable currency and coverage: `sp_a = 90.00 NOK` and `sp_b = 100.00 NOK`, both initially available.
-2. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
-3. Recompute affected current and historical minimum results. If `sp_b` remains eligible, it becomes the 100.00 NOK winner. If no offer remains eligible, represent the coverage gap rather than inventing a lowest price.
-4. Assert that `LowestPriceHistory` records the relevant winner/gap transition and `CurrentLowestPrice` no longer presents `sp_a` as eligible.
-5. Assert that **neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
+
+**Scenario steps:**
+1. Ingest a supported **availability-only** transition making `sp_a` unavailable; do not send a material price change.
+2. Recompute affected current and historical minimum results. If `sp_b` remains eligible, it becomes the 100.00 NOK winner. If no offer remains eligible, represent the coverage gap rather than inventing a lowest price.
+3. Assert that `LowestPriceHistory` records the relevant winner/gap transition and `CurrentLowestPrice` no longer presents `sp_a` as eligible.
+4. Assert that **neither StoreProduct gets a new PriceHistory price event from availability alone** (I-010).
 
 The system must use available observation/coverage evidence; no historical availability is fabricated where the source does not establish it.
 

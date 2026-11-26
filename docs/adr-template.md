@@ -59,6 +59,12 @@
 
 **Supersession:**
 
+**Authority Rule:**
+
+**Validation:**
+
+**Related Documents:**
+
 This is an example of a blank ADR using the template format. It demonstrates the structure and metadata required for a valid ADR.
 
 ## 11. Negative Test

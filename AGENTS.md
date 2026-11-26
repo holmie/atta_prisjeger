@@ -54,19 +54,12 @@ This repository is managed by OpenCode/Codex agents with the following workflow:
    - `contracts/lowest-price.md`
 3. Implement only the assigned task
 4. Run focused tests and checks:
-   - Run relevant unit tests: `python manage.py test`
+   - Run relevant unit tests: `python manage.py test` (only after Django project with manage.py has been bootstrapped)
    - Verify against invariants in `project-memory/02_INVARIANTS.md`
 5. Report evidence of testing in PR description
-6. Create PR with title starting `PJ-0001:`
+6. Create PR with title starting `PJ-XXXX: <title>` (where XXXX is the current assigned task ID)
 7. Do not merge or mark DONE until human operator reviews and merges
 
 ## Negative Test
 
-This repository contains no references to Atta codebase, confirming independence from the Atta system.
-
-To verify this manually:
-```bash
-grep -r "atta\|Atta" . --exclude-dir=.git --exclude-dir=__pycache__ --exclude="*.pyc" || echo "No Atta references found"
-```
-
-This confirms no Atta codebase is presumed.
+This repository currently contains no application code to check for cross-repo dependencies. When such files exist, a future/repeatable dependency inspection (e.g., imports, dependency manifests, environment/database configuration) will be used to verify independence from the Atta system. Atta may be documented as an independent consumer.

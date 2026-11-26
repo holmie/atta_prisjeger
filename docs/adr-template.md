@@ -30,6 +30,7 @@
 - Only project owners may approve ADRs
 - Agents may propose ADRs but may not mark them accepted or change an accepted contract on their own
 - All changes to accepted contracts must be documented in a corresponding ADR and coordinated with all stakeholders
+- ADRs transition from "Proposed" to "Accepted" only when approved by project owners
 
 ## 8. Validation
 
@@ -41,7 +42,13 @@
 
 ## 10. Example Empty ADR
 
-An empty sample ADR is valid and has a clear authority rule.
+### ADR-000: Template Example
+
+**Status:** Proposed  
+**Date:** 2026-11-26  
+**Owner/Approver:** [Project Owner Name]
+
+This is an example of a blank ADR using the template format. It demonstrates the structure and metadata required for a valid ADR.
 
 ## 11. Negative Test
 

@@ -11,6 +11,9 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Unique identifier (UUID)
   - Name and other identifying information
   - Source-specific configuration
+- **Key Characteristics**:
+  - Each StoreProduct must reference a Store via foreign key
+  - The Store foreign key in StoreProduct must identify the same Store as the DataSource foreign key
 
 ### DataSource
 - **Definition**: Feed/connector that belongs to one Store
@@ -42,12 +45,14 @@ This document defines the core domain models for Vareindeks and their relationsh
   - ProductIdentity foreign key (NOT NULL)
   - Reported GTIN/SKU retained from source
   - Current Decimal price (nullable)
+  - Currency (nullable text)
   - URL/status information
 - **Key Characteristics**:
   - Each StoreProduct is unique by `(source_id, external_key)` combination
   - Always linked to exactly one ProductIdentity (never NULL)
   - Source fields including reported_gtin are never overwritten
   - PriceHistory references StoreProduct and records initial valid price + material changes only
+  - Currency field is preserved from source and maintained alongside the price
 
 ### PriceHistory
 - **Definition**: Append-only record of material price changes referencing StoreProduct UUID
@@ -71,9 +76,11 @@ This document defines the core domain models for Vareindeks and their relationsh
   - References Store UUID, StoreProduct UUID and store_name_snapshot
   - Updated on material price changes
   - Contains the actual derived lowest-price amount
+  - Refreshed on merge, split, or relink of ProductIdentity
 - **Key Characteristics**:
   - Derived/repairable cache
   - Maintains historical seller information without current JOINs
+  - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
 
 ### LowestPriceHistory
 - **Definition**: Event-based record of winner changes for lowest prices
@@ -83,11 +90,13 @@ This document defines the core domain models for Vareindeks and their relationsh
   - Carry forward known prices within covered intervals
   - Never pre-observation or known unavailable gaps
   - Contains the actual derived lowest-price amount (and currency/availability semantics where applicable)
+  - Updated on material price changes and merge, split, or relink operations that affect the cheapest StoreProduct
 - **Key Characteristics**:
   - Event-based tracking of price winner changes
   - Historical seller store_id, store_product_id, store_name_snapshot preserved
   - Bounded to 24 months plus pre-cutoff checkpoints
   - Stores the actual derived lowest-price amount (not just winner information)
+  - Updated not only on material price changes but also on merge, split, or relink operations that affect the cheapest StoreProduct
 
 ## Source Truth vs Derived Data
 
@@ -152,3 +161,16 @@ The key point is that while `LowestPriceHistory` contains the actual lowest-pric
 3. **No data loss**: If you need the exact price from a specific store product, you must query `StoreProduct` or `PriceHistory`
 
 **Note**: For an updated and consistent description of what `LowestPriceHistory` contains (including actual price amounts), please refer to [docs/negative-test.md](negative-test.md).
+
+## Regression Test Scenario
+
+To properly test that the implementation correctly handles all scenarios, we need a more comprehensive regression test:
+
+### Planned Scenario: Price Change Impact on Lowest Price History
+1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00)
+2. Run derivation to establish baseline lowest price history
+3. Change the losing seller's price from 100.00 to 95.00 
+4. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
+5. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+
+This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.

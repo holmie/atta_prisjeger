@@ -34,6 +34,17 @@ This demonstrates that:
 - The actual prices are preserved in both source and derived records
 - However, the derived records are still recomputable from source data
 
+## Regression Test Scenario
+
+### Planned Scenario: Price Change Impact on Lowest Price History
+1. Create two StoreProducts with different stores and prices (e.g., 100.00 and 90.00)
+2. Run derivation to establish baseline lowest price history
+3. Change the losing seller's price from 100.00 to 95.00 
+4. Verify that PriceHistory retains both amounts (100.00 and 95.00) 
+5. Verify that LowestPriceHistory emits no new event because the winner is unchanged
+
+This scenario tests the specific case mentioned in the feedback where an implementation might discard non-winning source prices, which would be a regression.
+
 ## Correction Based on Feedback
 
 The original documentation incorrectly stated that `LowestPriceHistory` did not contain price values. This has been corrected to reflect that:
